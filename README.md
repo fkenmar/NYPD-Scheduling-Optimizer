@@ -1,3 +1,5 @@
+In-progress: Project status is complete - Refining and structuring on communicating the findings
+
 # Problem
 
 # Research
