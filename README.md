@@ -1,4 +1,6 @@
-In-progress: Project status is complete - Refining and structuring on communicating the findings
+In-progress: Project status is complete - Refining and structuring on communicating the findings..
+
+Future implementation: Geospatial data with NYC planimetrics 
 
 # Problem
 
