@@ -13,7 +13,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent
 CSV_PATH = ROOT / ".." / "data" / "predictions.csv"
-OUT_PATH = ROOT / "dashboard" / "data.js"
+OUT_PATH = ROOT / "docs" / "data.js"
 
 
 def borough_of(precinct: int) -> str:

@@ -21,8 +21,8 @@ Raw datasets are pulled directly from the NYC Open Data API in `clean.ipynb` —
 ```
 clean.ipynb  →  ../data/{arrests,crashes}_cleaned.csv
 Phase2.ipynb →  ../data/predictions.csv
-build_dashboard_data.py →  dashboard/data.js
-dashboard/index.html (served statically) →  interactive UI
+build_dashboard_data.py →  docs/data.js
+docs/index.html (served statically) →  interactive UI
 ```
 
 ## Notebooks
@@ -79,30 +79,30 @@ Alternative Spark pipeline that swaps `GBTRegressor`/`RandomForestClassifier` fo
 
 ## Dashboard
 
-A React + Tailwind + Leaflet single-page app under `dashboard/`. Hand-rolled SVG charts, dark-mode styling, real NYC precinct GeoJSON, no build step required (Babel-standalone transpiles JSX in the browser).
+A React + Tailwind + Leaflet single-page app under `docs/`. Hand-rolled SVG charts, dark-mode styling, real NYC precinct GeoJSON, no build step required (Babel-standalone transpiles JSX in the browser).
 
 **Files**
 
 | File | Purpose |
 |---|---|
-| `dashboard/index.html` | Entry point, CDN scripts, base styles |
-| `dashboard/data.js` | Auto-generated lookup table from `predictions.csv` |
-| `dashboard/app.jsx` | Top bar, KPIs, filter rail, layout, precinct detail panel |
-| `dashboard/map.jsx` | Leaflet choropleth with hover/select interactions |
-| `dashboard/charts.jsx` | Ranked bars, donut, heatmap, line chart primitives |
+| `docs/index.html` | Entry point, CDN scripts, base styles |
+| `docs/data.js` | Auto-generated lookup table from `predictions.csv` |
+| `docs/app.jsx` | Top bar, KPIs, filter rail, layout, precinct detail panel |
+| `docs/map.jsx` | Leaflet choropleth with hover/select interactions |
+| `docs/charts.jsx` | Ranked bars, donut, heatmap, line chart primitives |
 
 **Run it**
 ```bash
 # 1. Generate / refresh the dashboard data from the latest predictions
 python build_dashboard_data.py
 
-# 2. Serve dashboard/ via any static server
-cd dashboard
+# 2. Serve docs/ via any static server
+cd docs
 python3 -m http.server 8765
 # → open http://localhost:8765
 ```
 
-`data.js` is regenerated whenever `../data/predictions.csv` changes — re-run the build script and reload the browser. Deploying to Vercel / Netlify / GitHub Pages just requires uploading the `dashboard/` folder.
+`data.js` is regenerated whenever `../data/predictions.csv` changes — re-run the build script and reload the browser. Deploying to Vercel / Netlify / GitHub Pages just requires uploading the `docs/` folder.
 
 ## Features Used
 
@@ -127,6 +127,6 @@ Run order from a fresh clone:
 ```bash
 jupyter nbconvert --to notebook --execute clean.ipynb     # pulls raw data from NYC Open Data → ../data/
 jupyter nbconvert --to notebook --execute Phase2.ipynb    # writes ../data/predictions.csv
-python build_dashboard_data.py                            # writes dashboard/data.js
-cd dashboard && python3 -m http.server 8765               # serve the UI
+python build_dashboard_data.py                            # writes docs/data.js
+cd docs && python3 -m http.server 8765               # serve the UI
 ```
