@@ -1,6 +1,6 @@
 # Optimal NYPD Scheduling Model
 
-A data science project that uses NYPD arrest records and motor vehicle collision data to build machine learning models for optimizing police officer scheduling across New York City precincts.
+A data science project that uses NYPD arrest records and motor vehicle collision data to build machine learning models for optimizing police officer scheduling across New York City precincts. Outputs feed an interactive web dashboard.
 
 ## Overview
 
@@ -10,23 +10,32 @@ The project predicts incident demand (arrests + crashes) at the precinct level a
 
 | Dataset | Records | Source |
 |---|---|---|
-| NYPD Arrest Data (Year-to-Date) | 278,953 | NYC Open Data |
-| Motor Vehicle Collisions – Crashes | 2,000,126 | NYC Open Data |
+| NYPD Arrest Data (Year-to-Date) | ~279K | NYC Open Data (`uip8-fykc`) |
+| Motor Vehicle Collisions – Crashes | ~2M | NYC Open Data (`h9gi-nx95`) |
+| Police Precinct boundaries (GeoJSON) | 78 polygons | NYC Open Data (`y76i-bdw7`) |
 
-Data files are excluded from version control (see `.gitignore`).
+Raw datasets are pulled directly from the NYC Open Data API in `clean.ipynb` — no manual download required. Generated CSVs and the dashboard's `data.js` build artifact are excluded from version control (see `.gitignore`).
+
+## Pipeline
+
+```
+clean.ipynb  →  ../data/{arrests,crashes}_cleaned.csv
+Phase2.ipynb →  ../data/predictions.csv
+build_dashboard_data.py →  dashboard/data.js
+dashboard/index.html (served statically) →  interactive UI
+```
 
 ## Notebooks
 
 ### `clean.ipynb` — Data Cleaning
 
-Prepares both datasets for analysis:
-
+- Loads raw arrests + crashes directly from NYC Open Data via `pd.read_csv(api_url)`
 - Drops rows missing critical fields (`ARREST_DATE`, `ARREST_PRECINCT`, coordinates)
-- Fills missing boroughs with `UNKNOWN` rather than dropping (too many to lose)
+- Fills missing boroughs with `UNKNOWN` rather than dropping
 - Caps injury count outliers at the 99th percentile
-- Filters coordinates to valid NYC bounding box (removes ~248K crash rows with bad GPS)
+- Filters coordinates to a valid NYC bounding box (removes ~248K crash rows with bad GPS)
 - Engineers temporal features: `hour`, `day_of_week`, `month`, `year`
-- Outputs `arrests_cleaned.csv` and `crashes_cleaned.csv`
+- Outputs `../data/arrests_cleaned.csv` and `../data/crashes_cleaned.csv`
 
 ### `eda.ipynb` — Exploratory Data Analysis
 
@@ -61,10 +70,39 @@ Full distributed ML pipeline using Apache Spark (swap `file://` for `hdfs://` to
 - Evaluates accuracy and weighted F1; outputs a confusion matrix
 
 **Additional Analysis**
-- Peak incident windows: highest combined arrest + crash counts cluster around midnight on mid-week days
-- Precinct density ranking: top precincts by total incident volume with cluster membership
-- Pearson correlation between arrest and crash counts per precinct × time window
-- Seasonal decomposition of monthly crash counts (trend + seasonal + residual)
+- Peak incident windows, precinct density ranking, Pearson correlation between arrests and crashes, seasonal decomposition of monthly crash counts
+- Final cell exports `../data/predictions.csv` for the dashboard
+
+### `prediction.ipynb` — LightGBM-on-Spark Variant
+
+Alternative Spark pipeline that swaps `GBTRegressor`/`RandomForestClassifier` for SynapseML LightGBM. Same data path and outputs.
+
+## Dashboard
+
+A React + Tailwind + Leaflet single-page app under `dashboard/`. Hand-rolled SVG charts, dark-mode styling, real NYC precinct GeoJSON, no build step required (Babel-standalone transpiles JSX in the browser).
+
+**Files**
+
+| File | Purpose |
+|---|---|
+| `dashboard/index.html` | Entry point, CDN scripts, base styles |
+| `dashboard/data.js` | Auto-generated lookup table from `predictions.csv` |
+| `dashboard/app.jsx` | Top bar, KPIs, filter rail, layout, precinct detail panel |
+| `dashboard/map.jsx` | Leaflet choropleth with hover/select interactions |
+| `dashboard/charts.jsx` | Ranked bars, donut, heatmap, line chart primitives |
+
+**Run it**
+```bash
+# 1. Generate / refresh the dashboard data from the latest predictions
+python build_dashboard_data.py
+
+# 2. Serve dashboard/ via any static server
+cd dashboard
+python3 -m http.server 8765
+# → open http://localhost:8765
+```
+
+`data.js` is regenerated whenever `../data/predictions.csv` changes — re-run the build script and reload the browser. Deploying to Vercel / Netlify / GitHub Pages just requires uploading the `dashboard/` folder.
 
 ## Features Used
 
@@ -84,4 +122,11 @@ Full distributed ML pipeline using Apache Spark (swap `file://` for `hdfs://` to
 pip install pandas numpy matplotlib seaborn scikit-learn lightgbm pyspark statsmodels
 ```
 
-Place the raw CSV files in `../data/` relative to the notebooks before running `clean.ipynb`. Phase 2 reads from a `phase2/` directory configured via the `DATA_URI` variable in `Phase2.ipynb`.
+Run order from a fresh clone:
+
+```bash
+jupyter nbconvert --to notebook --execute clean.ipynb     # pulls raw data from NYC Open Data → ../data/
+jupyter nbconvert --to notebook --execute Phase2.ipynb    # writes ../data/predictions.csv
+python build_dashboard_data.py                            # writes dashboard/data.js
+cd dashboard && python3 -m http.server 8765               # serve the UI
+```

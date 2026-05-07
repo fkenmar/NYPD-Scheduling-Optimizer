@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentinel · NYPD Demand Forecast</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    html, body, #root { height: 100%; margin: 0; background: #0a0a0a; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      color: #e5e5e5;
+      letter-spacing: -0.005em;
+    }
+    .font-mono, [class*="font-mono"] {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace !important;
+      letter-spacing: 0;
+    }
+
+    /* 24-column grid for heatmap */
+    .grid-cols-24 { grid-template-columns: repeat(24, minmax(0, 1fr)); }
+
+    /* Hour slider styling */
+    .hour-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      outline: none;
+    }
+    .hour-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #5EEAD4;
+      cursor: grab;
+      border: 2px solid #0a0a0a;
+      box-shadow: 0 0 0 1px #5EEAD4;
+    }
+    .hour-slider::-webkit-slider-thumb:active { cursor: grabbing; }
+    .hour-slider::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #5EEAD4; cursor: grab; border: 2px solid #0a0a0a;
+      box-shadow: 0 0 0 1px #5EEAD4;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+    /* Leaflet overrides for dark mode */
+    .leaflet-container { background: #0a0a0a !important; outline: none; }
+    .leaflet-control-zoom a {
+      background: rgba(20,20,20,0.9) !important;
+      color: #e5e5e5 !important;
+      border: 1px solid rgba(255,255,255,0.1) !important;
+      font-weight: 300 !important;
+    }
+    .leaflet-control-zoom a:hover {
+      background: rgba(40,40,40,0.95) !important;
+    }
+    .leaflet-bar { box-shadow: none !important; border: none !important; }
+    .leaflet-interactive { transition: fill-opacity 120ms ease; }
+    .leaflet-interactive:hover { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="data.js"></script>
+  <script type="text/babel" src="charts.jsx"></script>
+  <script type="text/babel" src="map.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
