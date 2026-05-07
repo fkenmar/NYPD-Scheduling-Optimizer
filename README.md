@@ -1,4 +1,5 @@
 # Optimal NYPD Scheduling Model
+https://fkenmar.github.io/NYPD-Scheduling-Optimizer/
 
 A data science project that uses NYPD arrest records and motor vehicle collision data to build machine learning models for optimizing police officer scheduling across New York City precincts. Outputs feed an interactive web dashboard.
 
