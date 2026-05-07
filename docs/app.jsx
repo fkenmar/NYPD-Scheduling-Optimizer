@@ -31,7 +31,7 @@ function FilterRail({ filters, setFilters }) {
     setFilters((f) => ({ ...f, hourMode: m }));
 
   return (
-    <aside className="w-[260px] shrink-0 border-r border-white/[0.06] bg-neutral-950 flex flex-col">
+    <aside className="w-full lg:w-[260px] lg:shrink-0 border-b lg:border-b-0 lg:border-r border-white/[0.06] bg-neutral-950 flex flex-col">
       <div className="px-4 pt-4 pb-3 border-b border-white/[0.06]">
         <div className="text-[10px] font-mono text-neutral-500 tracking-[0.18em]">
           FILTERS
@@ -205,7 +205,7 @@ function FilterRail({ filters, setFilters }) {
         </div>
       </Section>
 
-      <div className="mt-auto px-4 py-3 border-t border-white/[0.06]">
+      <div className="lg:mt-auto px-4 py-3 border-t border-white/[0.06]">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-teal-300 animate-pulse" />
           <span className="text-[10px] font-mono text-neutral-500">
@@ -265,7 +265,7 @@ function hourLabel(h) {
 // ---------- Top bar / KPIs ----------
 function TopBar({ kpis, filters }) {
   return (
-    <header className="h-[60px] border-b border-white/[0.06] bg-neutral-950 flex items-stretch shrink-0">
+    <header className="min-h-[60px] border-b border-white/[0.06] bg-neutral-950 flex items-stretch shrink-0 overflow-x-auto">
       <div className="px-5 flex items-center gap-3 border-r border-white/[0.06] min-w-[260px]">
         <div className="w-7 h-7 rounded bg-teal-300/10 border border-teal-300/30 flex items-center justify-center">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -348,7 +348,7 @@ function PrecinctPanel({ precinct, filters, onClose }) {
     }
 
   return (
-    <div className="absolute top-0 right-0 h-full w-[420px] bg-neutral-950 border-l border-white/[0.08] z-20 flex flex-col shadow-2xl">
+    <div className="fixed inset-0 lg:absolute lg:inset-auto lg:top-0 lg:right-0 lg:h-full w-full lg:w-[420px] bg-neutral-950 lg:border-l border-white/[0.08] z-30 flex flex-col shadow-2xl overflow-y-auto">
       <div className="px-5 pt-4 pb-3 border-b border-white/[0.06] flex items-start justify-between">
         <div>
           <div className="text-[10px] font-mono text-neutral-500 tracking-[0.18em] mb-1">
@@ -593,20 +593,20 @@ function Dashboard() {
   }, [agg]);
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-neutral-950 text-neutral-200 overflow-hidden">
+    <div className="min-h-screen lg:h-screen w-full flex flex-col bg-neutral-950 text-neutral-200 lg:overflow-hidden">
       <TopBar kpis={kpis} filters={filters} />
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-col lg:flex-row flex-1 lg:min-h-0">
         <FilterRail filters={filters} setFilters={setFilters} />
 
         {/* Main canvas */}
         <main className="flex-1 min-w-0 p-3 flex flex-col gap-3 relative">
           {/* Top section: map + side charts */}
-          <div className="flex gap-3 flex-1 min-h-0" style={{ flexBasis: "65%" }}>
+          <div className="flex flex-col lg:flex-row gap-3 lg:flex-1 lg:min-h-0" style={{ flexBasis: "65%" }}>
             {/* Map */}
             <Card
               title="PRECINCT FORECAST MAP"
               sub={`${filters.hourMode === "all" ? "24h avg" : `${String(filters.hour).padStart(2, "0")}:00`} · ${[...filters.dows].map(d => DAY_LABELS[d].slice(0,3)).join(", ")} · ${MONTH_LABELS[filters.month - 1]}`}
-              className="flex-1 min-w-0"
+              className="flex-1 min-w-0 h-[420px] lg:h-auto"
               right={
                 <div className="flex items-center gap-2">
                   {hoveredPrecinct && (
@@ -639,11 +639,11 @@ function Dashboard() {
             </Card>
 
             {/* Right column */}
-            <div className="w-[400px] shrink-0 flex flex-col gap-3 min-h-0">
+            <div className="w-full lg:w-[400px] lg:shrink-0 flex flex-col gap-3 lg:min-h-0">
               <Card
                 title="TOP 15 PRECINCTS"
                 sub="ranked by predicted incidents in window"
-                className="flex-1 min-h-0 overflow-hidden"
+                className="flex-1 lg:min-h-0 overflow-hidden h-[340px] lg:h-auto"
               >
                 <div className="overflow-y-auto h-full -mx-3.5 -my-3.5 px-2 py-2">
                   <RankedBarChart
@@ -656,7 +656,8 @@ function Dashboard() {
               </Card>
 
               <Card title="DEMAND DISTRIBUTION"
-                    sub={`${data.PRECINCTS.length} precincts × ${filters.hourMode === "all" ? 24 : 1} hr × ${filters.dows.size} day${filters.dows.size > 1 ? "s" : ""}`}>
+                    sub={`${data.PRECINCTS.length} precincts × ${filters.hourMode === "all" ? 24 : 1} hr × ${filters.dows.size} day${filters.dows.size > 1 ? "s" : ""}`}
+                    className="h-[240px] lg:h-auto">
                 <div className="flex items-center justify-center h-full">
                   <DonutChart data={donut} />
                 </div>
@@ -665,11 +666,11 @@ function Dashboard() {
           </div>
 
           {/* Bottom section: heatmap + line chart */}
-          <div className="flex gap-3" style={{ flexBasis: "35%", minHeight: 0 }}>
+          <div className="flex flex-col lg:flex-row gap-3" style={{ flexBasis: "35%", minHeight: 0 }}>
             <Card
               title="CITYWIDE HEATMAP"
               sub={`hour × day-of-week · ${MONTH_LABELS[filters.month - 1]}`}
-              className="flex-1 min-w-0"
+              className="flex-1 min-w-0 h-[300px] lg:h-auto"
               right={
                 hoveredCell && (
                   <div className="text-[10px] font-mono text-neutral-300">
@@ -695,7 +696,7 @@ function Dashboard() {
             <Card
               title="MONTHLY TREND"
               sub={`citywide incident totals · 12-month forecast`}
-              className="w-[42%] shrink-0"
+              className="w-full lg:w-[42%] lg:shrink-0 h-[220px] lg:h-auto"
               right={
                 hoveredMonth && (
                   <div className="text-[10px] font-mono text-neutral-300">
