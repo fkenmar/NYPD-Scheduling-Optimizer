@@ -121,7 +121,7 @@ function DonutChart({ data, size = 140, stroke = 18 }) {
   let offset = 0;
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:items-center">
       <svg width={size} height={size} className="-rotate-90">
         <circle
           cx={size / 2}
@@ -151,11 +151,11 @@ function DonutChart({ data, size = 140, stroke = 18 }) {
           );
         })}
       </svg>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 w-full sm:w-auto">
         {data.map((d, i) => {
           const pct = ((d.value / total) * 100).toFixed(1);
           return (
-            <div key={i} className="flex items-center gap-2">
+            <div key={i} className="flex items-center justify-between gap-3 sm:justify-start">
               <span
                 className="w-2 h-2 rounded-sm"
                 style={{ background: d.color }}

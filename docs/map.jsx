@@ -120,6 +120,15 @@ function PrecinctMap({
     };
   }, []);
 
+  React.useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+    const refresh = () => map.invalidateSize();
+    refresh();
+    window.addEventListener("resize", refresh);
+    return () => window.removeEventListener("resize", refresh);
+  }, [loaded]);
+
   // Restyle on data / colorBy change
   React.useEffect(() => {
     if (!layerRef.current) return;
@@ -158,7 +167,7 @@ function PrecinctMap({
       )}
 
       {/* Color legend overlay */}
-      <div className="absolute left-3 bottom-3 bg-neutral-950/85 backdrop-blur border border-white/10 rounded-md px-3 py-2.5 pointer-events-none">
+      <div className="absolute left-2 bottom-2 sm:left-3 sm:bottom-3 bg-neutral-950/85 backdrop-blur border border-white/10 rounded-md px-2.5 py-2 sm:px-3 sm:py-2.5 pointer-events-none max-w-[calc(100%-1rem)] sm:max-w-none">
         <div className="text-[9px] font-mono text-neutral-500 tracking-widest mb-1.5">
           {colorBy === "demand" ? "DEMAND LEVEL" : "INCIDENT INTENSITY"}
         </div>
@@ -177,7 +186,7 @@ function PrecinctMap({
         ) : (
           <div className="flex items-center gap-2">
             <div
-              className="w-24 h-2 rounded-sm"
+              className="w-16 sm:w-24 h-2 rounded-sm"
               style={{
                 background:
                   "linear-gradient(to right, rgb(26,46,44), rgb(94,234,212))",
@@ -191,7 +200,7 @@ function PrecinctMap({
       </div>
 
       {/* Precinct count overlay */}
-      <div className="absolute right-3 top-3 bg-neutral-950/85 backdrop-blur border border-white/10 rounded-md px-2.5 py-1.5 pointer-events-none">
+      <div className="absolute right-2 top-2 sm:right-3 sm:top-3 bg-neutral-950/85 backdrop-blur border border-white/10 rounded-md px-2 py-1.5 sm:px-2.5 pointer-events-none">
         <span className="text-[9px] font-mono text-neutral-500 tracking-widest">
           NYC · 77 PRECINCTS
         </span>

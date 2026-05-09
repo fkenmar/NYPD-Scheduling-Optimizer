@@ -15,7 +15,7 @@ function formatNum(n) {
 }
 
 // ---------- Filter rail ----------
-function FilterRail({ filters, setFilters }) {
+function FilterRail({ filters, setFilters, mobileOpen, onClose }) {
   const setHour = (h) => setFilters((f) => ({ ...f, hour: h }));
   const toggleDow = (d) =>
     setFilters((f) => {
@@ -31,11 +31,21 @@ function FilterRail({ filters, setFilters }) {
     setFilters((f) => ({ ...f, hourMode: m }));
 
   return (
-    <aside className="w-full lg:w-[260px] lg:shrink-0 border-b lg:border-b-0 lg:border-r border-white/[0.06] bg-neutral-950 flex flex-col">
-      <div className="px-4 pt-4 pb-3 border-b border-white/[0.06]">
+    <aside
+      className={`${
+        mobileOpen ? "flex" : "hidden"
+      } lg:flex w-full lg:w-[260px] lg:shrink-0 border-b lg:border-b-0 lg:border-r border-white/[0.06] bg-neutral-950 flex-col max-h-[72vh] lg:max-h-none overflow-y-auto`}
+    >
+      <div className="px-4 pt-4 pb-3 border-b border-white/[0.06] flex items-center justify-between">
         <div className="text-[10px] font-mono text-neutral-500 tracking-[0.18em]">
           FILTERS
         </div>
+        <button
+          onClick={onClose}
+          className="lg:hidden text-[10px] font-mono text-neutral-500 hover:text-neutral-200 transition-colors"
+        >
+          CLOSE
+        </button>
       </div>
 
       {/* Hour */}
@@ -262,6 +272,14 @@ function hourLabel(h) {
   return "OVERNIGHT";
 }
 
+function summarizeDows(dows) {
+  const values = Array.from(dows).sort((a, b) => a - b);
+  if (values.length === 7) return "All days";
+  if (values.length === 5 && values.every((d, i) => d === i)) return "Weekdays";
+  if (values.length === 2 && values[0] === 5 && values[1] === 6) return "Weekend";
+  return values.map((d) => DAY_LABELS[d].slice(0, 3)).join(", ");
+}
+
 // ---------- Top bar / KPIs ----------
 function TopBar({ kpis, filters }) {
   return (
@@ -483,7 +501,7 @@ function ClusterDot({ c, large }) {
 function Card({ title, sub, right, children, className = "" }) {
   return (
     <div className={`bg-neutral-950 border border-white/[0.06] rounded-md flex flex-col ${className}`}>
-      <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-white/[0.04]">
+      <div className="flex flex-col gap-2 px-3.5 py-2.5 border-b border-white/[0.04] sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="text-[10px] font-mono text-neutral-400 tracking-[0.16em]">
             {title}
@@ -517,6 +535,7 @@ function Dashboard() {
   const [selectedPrecinct, setSelectedPrecinct] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
   const [hoveredMonth, setHoveredMonth] = useState(null);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Aggregate for current filter
   const agg = useMemo(() => {
@@ -592,23 +611,55 @@ function Dashboard() {
     return out;
   }, [agg]);
 
+  const mobileFilterSummary = useMemo(() => {
+    const hour =
+      filters.hourMode === "all"
+        ? "24h avg"
+        : `${String(filters.hour).padStart(2, "0")}:00 ${hourLabel(filters.hour).toLowerCase()}`;
+    return `${MONTH_LABELS[filters.month - 1]} · ${summarizeDows(filters.dows)} · ${hour}`;
+  }, [filters]);
+
   return (
     <div className="min-h-screen lg:h-screen w-full flex flex-col bg-neutral-950 text-neutral-200 lg:overflow-hidden">
       <TopBar kpis={kpis} filters={filters} />
       <div className="flex flex-col lg:flex-row flex-1 lg:min-h-0">
-        <FilterRail filters={filters} setFilters={setFilters} />
+        <div className="lg:hidden border-b border-white/[0.06] bg-neutral-950 px-3 py-2.5">
+          <button
+            onClick={() => setMobileFiltersOpen((open) => !open)}
+            className="w-full flex items-start justify-between gap-3 rounded-md border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-left"
+          >
+            <div>
+              <div className="text-[9px] font-mono text-neutral-500 tracking-[0.18em]">
+                FILTERS
+              </div>
+              <div className="text-[11px] text-neutral-300 mt-1 leading-relaxed">
+                {mobileFilterSummary}
+              </div>
+            </div>
+            <span className="text-[10px] font-mono text-teal-300 shrink-0 pt-0.5">
+              {mobileFiltersOpen ? "HIDE" : "SHOW"}
+            </span>
+          </button>
+        </div>
+
+        <FilterRail
+          filters={filters}
+          setFilters={setFilters}
+          mobileOpen={mobileFiltersOpen}
+          onClose={() => setMobileFiltersOpen(false)}
+        />
 
         {/* Main canvas */}
-        <main className="flex-1 min-w-0 p-3 flex flex-col gap-3 relative">
+        <main className="flex-1 min-w-0 p-2 sm:p-3 flex flex-col gap-3 relative">
           {/* Top section: map + side charts */}
           <div className="flex flex-col lg:flex-row gap-3 lg:flex-1 lg:min-h-0" style={{ flexBasis: "65%" }}>
             {/* Map */}
             <Card
               title="PRECINCT FORECAST MAP"
               sub={`${filters.hourMode === "all" ? "24h avg" : `${String(filters.hour).padStart(2, "0")}:00`} · ${[...filters.dows].map(d => DAY_LABELS[d].slice(0,3)).join(", ")} · ${MONTH_LABELS[filters.month - 1]}`}
-              className="flex-1 min-w-0 h-[420px] lg:h-auto"
+              className="flex-1 min-w-0 min-h-[26rem] h-[62vh] max-h-[38rem] sm:h-[34rem] lg:h-auto lg:max-h-none overflow-hidden"
               right={
-                <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2">
                   {hoveredPrecinct && (
                     <div className="flex items-center gap-2 px-2 py-1 bg-white/[0.04] rounded">
                       <span className="text-[10px] font-mono text-neutral-500">P</span>
@@ -623,8 +674,8 @@ function Dashboard() {
                 </div>
               }
             >
-              <div className="w-full h-full -m-3.5 mt-0">
-                <div className="w-full h-full relative" style={{ height: "calc(100% + 14px)" }}>
+              <div className="w-full h-full -mx-3.5 -mb-3.5 -mt-3.5">
+                <div className="w-full h-full relative min-h-[21rem] sm:min-h-[25rem]">
                   <PrecinctMap
                     precinctValues={mapValues}
                     colorBy={filters.colorBy}
@@ -643,7 +694,7 @@ function Dashboard() {
               <Card
                 title="TOP 15 PRECINCTS"
                 sub="ranked by predicted incidents in window"
-                className="flex-1 lg:min-h-0 overflow-hidden h-[340px] lg:h-auto"
+                className="flex-1 lg:min-h-0 overflow-hidden min-h-[18rem] h-[20rem] lg:h-auto"
               >
                 <div className="overflow-y-auto h-full -mx-3.5 -my-3.5 px-2 py-2">
                   <RankedBarChart
@@ -657,7 +708,7 @@ function Dashboard() {
 
               <Card title="DEMAND DISTRIBUTION"
                     sub={`${data.PRECINCTS.length} precincts × ${filters.hourMode === "all" ? 24 : 1} hr × ${filters.dows.size} day${filters.dows.size > 1 ? "s" : ""}`}
-                    className="h-[240px] lg:h-auto">
+                    className="min-h-[16rem] h-[16rem] lg:h-auto">
                 <div className="flex items-center justify-center h-full">
                   <DonutChart data={donut} />
                 </div>
@@ -670,7 +721,7 @@ function Dashboard() {
             <Card
               title="CITYWIDE HEATMAP"
               sub={`hour × day-of-week · ${MONTH_LABELS[filters.month - 1]}`}
-              className="flex-1 min-w-0 h-[300px] lg:h-auto"
+              className="flex-1 min-w-0 min-h-[21rem] h-[24rem] lg:h-auto"
               right={
                 hoveredCell && (
                   <div className="text-[10px] font-mono text-neutral-300">
@@ -682,8 +733,8 @@ function Dashboard() {
                 )
               }
             >
-              <div className="h-full flex items-center">
-                <div className="w-full">
+              <div className="h-full flex items-center overflow-x-auto pb-1">
+                <div className="w-full min-w-[40rem]">
                   <HeatmapChart
                     grid={cityHeat}
                     onCellHover={setHoveredCell}
@@ -696,7 +747,7 @@ function Dashboard() {
             <Card
               title="MONTHLY TREND"
               sub={`citywide incident totals · 12-month forecast`}
-              className="w-full lg:w-[42%] lg:shrink-0 h-[220px] lg:h-auto"
+              className="w-full lg:w-[42%] lg:shrink-0 min-h-[16rem] h-[17rem] lg:h-auto"
               right={
                 hoveredMonth && (
                   <div className="text-[10px] font-mono text-neutral-300">
