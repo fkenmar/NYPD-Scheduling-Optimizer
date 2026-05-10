@@ -2,5 +2,7 @@
 .ipynb_checkpoints/
 .qodo/
 .claude/
+__pycache__/
+*.pyc
 *.csv
 *.mp4

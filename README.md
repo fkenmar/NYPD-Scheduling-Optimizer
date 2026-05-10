@@ -106,6 +106,26 @@ python3 -m http.server 8765
 
 `data.js` is regenerated whenever `../data/predictions.csv` changes — re-run the build script and reload the browser. Deploying to Vercel / Netlify / GitHub Pages just requires uploading the `docs/` folder.
 
+To automate that refresh, use:
+
+```bash
+python refresh_app_data.py
+```
+
+What it does:
+
+- checks the live NYC Open Data arrest and crash datasets for new rows / update timestamps
+- skips the expensive notebook run if the source datasets have not changed
+- reruns `clean.ipynb`, `Phase2.ipynb`, and `build_dashboard_data.py` when updates are detected
+- records refresh metadata in `../data/refresh_state.json`, which the dashboard reads to show real sync dates
+
+Optional flags:
+
+```bash
+python refresh_app_data.py --check-only
+python refresh_app_data.py --force
+```
+
 ## Features Used
 
 | Feature | Description |

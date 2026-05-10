@@ -1,18 +1,19 @@
 """
-Generate `design files/data.js` from `../data/predictions.csv`.
+Generate `docs/data.js` from `../data/predictions.csv`.
 
 Reads the predictions CSV produced by Phase2.ipynb and writes a data.js that
-exposes the same `window.NYPDData` API the React dashboard expects, but backed
-by real model output instead of the synthetic mock.
+exposes the same `window.NYPDData` API the React dashboard expects.
 """
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent
 CSV_PATH = ROOT / ".." / "data" / "predictions.csv"
+REFRESH_STATE_PATH = ROOT / ".." / "data" / "refresh_state.json"
 OUT_PATH = ROOT / "docs" / "data.js"
 
 
@@ -26,6 +27,41 @@ def borough_of(precinct: int) -> str:
     if 100 <= precinct <= 115:
         return "Queens"
     return "Staten Island"
+
+
+def utc_iso(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def file_mtime_iso(path: Path) -> str:
+    return utc_iso(datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc))
+
+
+def load_refresh_state() -> dict:
+    if not REFRESH_STATE_PATH.exists():
+        return {}
+    try:
+        return json.loads(REFRESH_STATE_PATH.read_text())
+    except json.JSONDecodeError:
+        return {}
+
+
+def parse_iso(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def latest_source_updated_at(sources: dict) -> str | None:
+    latest = None
+    for meta in sources.values():
+        parsed = parse_iso(meta.get("updated_at"))
+        if parsed is not None and (latest is None or parsed > latest):
+            latest = parsed
+    return utc_iso(latest) if latest is not None else None
 
 
 def main() -> None:
@@ -90,6 +126,7 @@ def main() -> None:
         else:
             cluster_labels[c] = "Evening-peaked"
 
+    refresh_state = load_refresh_state()
     payload = {
         "PRECINCTS": precincts,
         "COUNTS": counts,
@@ -98,6 +135,16 @@ def main() -> None:
         "CLUSTER_LABELS": cluster_labels,
         "P60": p60,
         "P85": p85,
+        "META": {
+            "generatedAt": utc_iso(datetime.now(timezone.utc)),
+            "predictionsUpdatedAt": file_mtime_iso(CSV_PATH),
+            "predictionsRowCount": int(len(df)),
+            "sources": refresh_state.get("sources", {}),
+            "latestSourceUpdatedAt": latest_source_updated_at(
+                refresh_state.get("sources", {})
+            ),
+            "lastRefresh": refresh_state.get("last_refresh", {}),
+        },
     }
 
     payload_json = json.dumps(payload, separators=(",", ":"))

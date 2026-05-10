@@ -14,8 +14,41 @@ function formatNum(n) {
   return Math.round(n).toLocaleString();
 }
 
+function parseMetaDate(value) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatMetaDate(value) {
+  const parsed = parseMetaDate(value);
+  if (!parsed) return "Unknown";
+  return parsed.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function relativeTimeFromNow(value) {
+  const parsed = parseMetaDate(value);
+  if (!parsed) return "unknown";
+
+  const diffMs = Date.now() - parsed.getTime();
+  const diffMinutes = Math.max(0, Math.round(diffMs / 60000));
+
+  if (diffMinutes < 1) return "just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.round(diffHours / 24);
+  return `${diffDays}d ago`;
+}
+
 // ---------- Filter rail ----------
-function FilterRail({ filters, setFilters, mobileOpen, onClose }) {
+function FilterRail({ filters, setFilters, mobileOpen, onClose, meta }) {
   const setHour = (h) => setFilters((f) => ({ ...f, hour: h }));
   const toggleDow = (d) =>
     setFilters((f) => {
@@ -209,7 +242,8 @@ function FilterRail({ filters, setFilters, mobileOpen, onClose }) {
       <Section label="MODEL">
         <div className="space-y-1.5">
           <ModelRow label="Type" value="Gradient Boost · v2.1" />
-          <ModelRow label="Trained" value="Apr 28, 2026" />
+          <ModelRow label="Predictions" value={formatMetaDate(meta.predictionsUpdatedAt)} />
+          <ModelRow label="Source data" value={formatMetaDate(meta.latestSourceUpdatedAt)} />
           <ModelRow label="Window" value="2019–2025 · 7Y" />
           <ModelRow label="MAE" value="3.42 incidents/hr" />
         </div>
@@ -219,7 +253,7 @@ function FilterRail({ filters, setFilters, mobileOpen, onClose }) {
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-teal-300 animate-pulse" />
           <span className="text-[10px] font-mono text-neutral-500">
-            LIVE · synced 2m ago
+            SYNCED · {relativeTimeFromNow(meta.generatedAt)}
           </span>
         </div>
       </div>
@@ -366,89 +400,96 @@ function PrecinctPanel({ precinct, filters, onClose }) {
     }
 
   return (
-    <div className="fixed inset-0 lg:absolute lg:inset-auto lg:top-0 lg:right-0 lg:h-full w-full lg:w-[420px] bg-neutral-950 lg:border-l border-white/[0.08] z-30 flex flex-col shadow-2xl overflow-y-auto">
-      <div className="px-5 pt-4 pb-3 border-b border-white/[0.06] flex items-start justify-between">
-        <div>
-          <div className="text-[10px] font-mono text-neutral-500 tracking-[0.18em] mb-1">
-            PRECINCT DETAIL
-          </div>
-          <div className="flex items-baseline gap-3">
-            <span className="text-[32px] font-light tabular-nums text-neutral-100 tracking-tight leading-none">
-              #{String(precinct).padStart(3, "0")}
-            </span>
-            <span className="text-[12px] text-neutral-400">{boro}</span>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="text-neutral-500 hover:text-neutral-200 transition-colors p-1"
-          aria-label="Close panel"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14">
-            <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="1.2" />
-          </svg>
-        </button>
-      </div>
-
-      <div className="px-5 py-3 border-b border-white/[0.06]">
-        <div className="grid grid-cols-3 gap-2">
-          <PanelStat label="Forecast" value={formatNum(avg)} sub="this window" />
-          <PanelStat label="Demand" value={lvl} accent={DEMAND_COLORS[lvl]} />
-          <PanelStat
-            label="Peak"
-            value={`${DAY_LABELS[peak.d].slice(0, 3)} ${String(peak.h).padStart(2, "0")}:00`}
-            sub={`${formatNum(peak.v)} incidents`}
-          />
-        </div>
-      </div>
-
-      <div className="px-5 py-4 border-b border-white/[0.06]">
-        <div className="text-[9px] font-mono text-neutral-500 tracking-[0.18em] mb-3">
-          HOUR × DAY HEATMAP · {MONTH_LABELS[filters.month - 1].toUpperCase()}
-        </div>
-        <HeatmapChart grid={grid} max={max} />
-      </div>
-
-      <div className="px-5 py-4 border-b border-white/[0.06]">
-        <div className="text-[9px] font-mono text-neutral-500 tracking-[0.18em] mb-2">
-          CLUSTER MEMBERSHIP · K-MEANS k=4
-        </div>
-        <div className="flex items-center gap-3 mb-3">
-          <ClusterDot c={cluster} large />
+    <div className="fixed inset-0 z-40 lg:absolute lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[420px]">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute inset-0 bg-neutral-950/96 backdrop-blur-sm lg:hidden"
+        aria-label="Close precinct details"
+      />
+      <div className="relative h-full w-full bg-neutral-950 lg:border-l border-white/[0.08] shadow-2xl overflow-y-auto overscroll-y-contain">
+        <div className="px-5 pt-4 pb-3 border-b border-white/[0.06] flex items-start justify-between">
           <div>
-            <div className="text-[12px] text-neutral-200">
-              Cluster {cluster}
+            <div className="text-[10px] font-mono text-neutral-500 tracking-[0.18em] mb-1">
+              PRECINCT DETAIL
             </div>
-            <div className="text-[10px] text-neutral-500 font-mono">
-              {data.CLUSTER_LABELS[cluster]}
+            <div className="flex items-baseline gap-3">
+              <span className="text-[32px] font-light tabular-nums text-neutral-100 tracking-tight leading-none">
+                #{String(precinct).padStart(3, "0")}
+              </span>
+              <span className="text-[12px] text-neutral-400">{boro}</span>
             </div>
           </div>
+          <button
+            onClick={onClose}
+            className="text-neutral-500 hover:text-neutral-200 transition-colors p-1"
+            aria-label="Close panel"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14">
+              <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="1.2" />
+            </svg>
+          </button>
         </div>
-        <div className="flex gap-1">
-          {[0, 1, 2, 3].map((c) => (
-            <div
-              key={c}
-              className={`flex-1 h-1 rounded-full ${
-                c === cluster ? "bg-teal-300" : "bg-white/10"
-              }`}
+        <div className="px-5 py-3 border-b border-white/[0.06]">
+          <div className="grid grid-cols-3 gap-2">
+            <PanelStat label="Forecast" value={formatNum(avg)} sub="this window" />
+            <PanelStat label="Demand" value={lvl} accent={DEMAND_COLORS[lvl]} />
+            <PanelStat
+              label="Peak"
+              value={`${DAY_LABELS[peak.d].slice(0, 3)} ${String(peak.h).padStart(2, "0")}:00`}
+              sub={`${formatNum(peak.v)} incidents`}
             />
-          ))}
-        </div>
-      </div>
-
-      <div className="px-5 py-4">
-        <div className="text-[9px] font-mono text-neutral-500 tracking-[0.18em] mb-2">
-          STAFFING RECOMMENDATION
-        </div>
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded p-3">
-          <div className="flex items-baseline justify-between mb-1">
-            <span className="text-[11px] text-neutral-400">Suggested officers</span>
-            <span className="text-[20px] font-light tabular-nums text-teal-300">
-              {Math.max(4, Math.round(avg / 4))}
-            </span>
           </div>
-          <div className="text-[10px] text-neutral-500 leading-relaxed">
-            Based on {lvl.toLowerCase()} demand classification at {Math.round(avg)} predicted incidents · 1 officer per 4 incidents/hr baseline.
+        </div>
+
+        <div className="px-5 py-4 border-b border-white/[0.06] bg-neutral-950">
+          <div className="text-[9px] font-mono text-neutral-500 tracking-[0.18em] mb-3">
+            HOUR × DAY HEATMAP · {MONTH_LABELS[filters.month - 1].toUpperCase()}
+          </div>
+          <HeatmapChart grid={grid} max={max} />
+        </div>
+
+        <div className="px-5 py-4 border-b border-white/[0.06]">
+          <div className="text-[9px] font-mono text-neutral-500 tracking-[0.18em] mb-2">
+            CLUSTER MEMBERSHIP · K-MEANS k=4
+          </div>
+          <div className="flex items-center gap-3 mb-3">
+            <ClusterDot c={cluster} large />
+            <div>
+              <div className="text-[12px] text-neutral-200">
+                Cluster {cluster}
+              </div>
+              <div className="text-[10px] text-neutral-500 font-mono">
+                {data.CLUSTER_LABELS[cluster]}
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-1">
+            {[0, 1, 2, 3].map((c) => (
+              <div
+                key={c}
+                className={`flex-1 h-1 rounded-full ${
+                  c === cluster ? "bg-teal-300" : "bg-white/10"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="px-5 py-4">
+          <div className="text-[9px] font-mono text-neutral-500 tracking-[0.18em] mb-2">
+            STAFFING RECOMMENDATION
+          </div>
+          <div className="bg-white/[0.03] border border-white/[0.06] rounded p-3">
+            <div className="flex items-baseline justify-between mb-1">
+              <span className="text-[11px] text-neutral-400">Suggested officers</span>
+              <span className="text-[20px] font-light tabular-nums text-teal-300">
+                {Math.max(4, Math.round(avg / 4))}
+              </span>
+            </div>
+            <div className="text-[10px] text-neutral-500 leading-relaxed">
+              Based on {lvl.toLowerCase()} demand classification at {Math.round(avg)} predicted incidents · 1 officer per 4 incidents/hr baseline.
+            </div>
           </div>
         </div>
       </div>
@@ -522,6 +563,7 @@ function Card({ title, sub, right, children, className = "" }) {
 // ---------- Main Dashboard ----------
 function Dashboard() {
   const data = window.NYPDData;
+  const meta = data.META || {};
 
   const [filters, setFilters] = useState({
     hour: 22,
@@ -536,6 +578,15 @@ function Dashboard() {
   const [hoveredCell, setHoveredCell] = useState(null);
   const [hoveredMonth, setHoveredMonth] = useState(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    if (selectedPrecinct == null || window.innerWidth >= 1024) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [selectedPrecinct]);
 
   // Aggregate for current filter
   const agg = useMemo(() => {
@@ -647,6 +698,7 @@ function Dashboard() {
           setFilters={setFilters}
           mobileOpen={mobileFiltersOpen}
           onClose={() => setMobileFiltersOpen(false)}
+          meta={meta}
         />
 
         {/* Main canvas */}
