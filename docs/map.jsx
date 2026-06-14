@@ -1,8 +1,29 @@
 // Choropleth map of NYC police precincts using Leaflet + real GeoJSON
 // Falls back gracefully if the network fetch fails.
 
-const PRECINCT_GEOJSON_URL =
+// Precinct boundaries are static, so they are vendored into the repo and loaded
+// locally. The map no longer depends on a live third-party API at render time
+// (NYC Open Data outages used to break the whole map). The remote endpoint is
+// kept only as a last-resort fallback.
+const PRECINCT_GEOJSON_LOCAL = "precincts.geojson";
+const PRECINCT_GEOJSON_REMOTE =
   "https://data.cityofnewyork.us/resource/y76i-bdw7.geojson?$limit=200";
+
+// Load the local file first; only hit the network if it is somehow missing.
+// Crucially, check r.ok before parsing — a 503 returns an HTML error page, and
+// blindly calling r.json() on that is what previously surfaced as a failure.
+async function loadPrecinctGeoJSON() {
+  try {
+    const r = await fetch(PRECINCT_GEOJSON_LOCAL);
+    if (r.ok) return await r.json();
+    throw new Error("local geojson HTTP " + r.status);
+  } catch (localErr) {
+    console.warn("Local precinct GeoJSON unavailable, trying remote:", localErr);
+    const r = await fetch(PRECINCT_GEOJSON_REMOTE);
+    if (!r.ok) throw new Error("remote geojson HTTP " + r.status);
+    return await r.json();
+  }
+}
 
 function PrecinctMap({
   precinctValues, // {precinct: {avg, total} or number}
@@ -82,9 +103,8 @@ function PrecinctMap({
 
     mapRef.current = map;
 
-    // Fetch precinct geojson
-    fetch(PRECINCT_GEOJSON_URL)
-      .then((r) => r.json())
+    // Fetch precinct geojson (local first, remote fallback)
+    loadPrecinctGeoJSON()
       .then((geo) => {
         const layer = L.geoJSON(geo, {
           style: (f) => ({
